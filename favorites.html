@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VIBE — Favorites</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text2);
+}
+
+.empty-state-icon {
+  font-size: 72px;
+  margin-bottom: 16px;
+}
+
+.empty-state-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text1);
+  margin-bottom: 8px;
+}
+
+.empty-state-desc {
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.empty-state-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--accent1);
+  color: white;
+  border-radius: 24px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.empty-state-btn:hover {
+  background: var(--accent2);
+  transform: translateY(-2px);
+}
+</style>
+</head>
+<body>
+
+<!-- ─── TOP NAV ─── -->
+<nav class="topnav">
+  <a href="index.html" class="logo">RESONEX<span></span></a>
+  <div class="nav-pills">
+    <a href="index.html"     class="nav-pill">Home</a>
+    <a href="trending.html"  class="nav-pill">Trending</a>
+    <a href="playlists.html" class="nav-pill">Playlists</a>
+    <a href="artists.html"   class="nav-pill">Artists</a>
+    <a href="favorites.html" class="nav-pill active">Favorites</a>
+  </div>
+</nav>
+
+<!-- ─── PAGE CONTENT ─── -->
+<div class="page-body">
+
+  <a href="index.html" class="back-btn">← Back</a>
+
+  <!-- Inner Hero -->
+  <div class="inner-hero">
+    <div class="ih-bg" style="background: linear-gradient(135deg, #f5a623, #f59e0b);"></div>
+    <div class="ih-content">
+      <span class="ih-emoji">❤️</span>
+      <div class="ih-title">Favorites</div>
+      <div class="ih-sub" id="favSubtitle">Songs you love most</div>
+    </div>
+  </div>
+
+  <!-- Song List -->
+  <div class="song-row" id="songList">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-state-icon">💔</div>
+    <div class="empty-state-title">No Favorites Yet</div>
+    <div class="empty-state-desc">Start adding songs to your favorites by clicking the heart icon on any track</div>
+    <a href="trending.html" class="empty-state-btn">Explore Music</a>
+  </div>
+
+</div><!-- end page-body -->
+
+<!-- ─── MINI PLAYER ─── -->
+<div class="mini-player hidden" id="miniPlayer" onclick="window.location.href='player.html'">
+  <div class="mp-art" id="mpArt">🎵</div>
+  <div class="mp-info">
+    <div class="mp-title"  id="mpTitle">—</div>
+    <div class="mp-artist" id="mpArtist">—</div>
+  </div>
+  <div class="mp-progress">
+    <div class="mp-progress-fill" id="mpFill"></div>
+  </div>
+  <div class="mp-controls" onclick="event.stopPropagation()">
+    <button class="mp-btn" onclick="prevTrack()">⏮</button>
+    <button class="mp-play" id="mpPlay" onclick="togglePlay()">▶</button>
+    <button class="mp-btn" onclick="nextTrack()">⏭</button>
+  </div>
+</div>
+
+<!-- ─── SCRIPTS ─── -->
+<script src="data.js"></script>
+<script>
+(function renderFavorites() {
+  const row = document.getElementById('songList');
+  const emptyState = document.getElementById('emptyState');
+  const subtitle = document.getElementById('favSubtitle');
+  
+  // Get favorite song IDs from localStorage
+  const favoriteSongs = favorites.map(id => DATA.songs[id]).filter(Boolean);
+  
+  if (favoriteSongs.length === 0) {
+    // Show empty state
+    emptyState.style.display = 'block';
+    row.style.display = 'none';
+    subtitle.textContent = 'No favorites yet';
+  } else {
+    // Show songs
+    emptyState.style.display = 'none';
+    row.style.display = 'flex';
+    subtitle.textContent = `${favoriteSongs.length} ${favoriteSongs.length === 1 ? 'song' : 'songs'}`;
+    
+    favoriteSongs.forEach((song, i) => {
+      row.appendChild(buildSongItem(song, i + 1));
+    });
+  }
+  
+  highlightActiveSong();
+})();
+
+function buildSongItem(song, rank) {
+  const div          = document.createElement('div');
+  div.className      = 'song-item';
+  div.dataset.songId = song.id;
+  div.onclick        = () => playSong(song.id, true);
+  
+  // Build album art HTML with image support
+  let artHTML;
+  if (song.cover) {
+    artHTML = `<img src="${song.cover}" alt="${song.title}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+  } else {
+    artHTML = song.emoji;
+  }
+  
+  div.innerHTML = `
+    <span class="song-rank">${rank}</span>
+    <div class="song-art">${artHTML}</div>
+    <div class="song-details">
+      <div class="song-title">${song.title}</div>
+      <div class="song-artist">${song.artist}</div>
+    </div>
+    <span class="song-dur">${fmtTime(song.dur)}</span>
+    <div class="song-eq"><span></span><span></span><span></span></div>
+  `;
+  return div;
+}
+
+syncMiniPlayer();
+highlightActiveSong();
+</script>
+</body>
+</html>
