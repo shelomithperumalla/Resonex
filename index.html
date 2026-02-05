@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VIBE — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- ─── TOP NAV ─── -->
+<nav class="topnav">
+  <a href="index.html" class="logo">RESONEX<span></span></a>
+  <div class="nav-pills">
+    <a href="index.html"     class="nav-pill active">Home</a>
+    <a href="trending.html"  class="nav-pill">Trending</a>
+    <a href="playlists.html" class="nav-pill">Playlists</a>
+    <a href="artists.html"   class="nav-pill">Artists</a>
+    <a href="favorites.html" class="nav-pill">Favorites</a>
+  </div>
+</nav>
+
+<!-- ─── PAGE CONTENT ─── -->
+<div class="page-body">
+
+  <!-- Hero Banner -->
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-tag">✦ Featured Today</div>
+      <div class="hero-title">Discover Your<br/>Next Favorite</div>
+      <div class="hero-sub">Curated mixes, trending hits, and fresh picks — all in one place.</div>
+      <a href="trending.html" class="hero-btn">▶ &nbsp;Explore Now</a>
+    </div>
+  </div>
+
+  <!-- Browse Categories -->
+  <div class="section-head">
+    <span class="section-title">Browse Categories</span>
+  </div>
+  <div class="cat-grid" id="catGrid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Trending Preview -->
+  <div class="section-head">
+    <span class="section-title">Trending Now</span>
+    <a href="trending.html" class="section-see">See All →</a>
+  </div>
+  <div class="song-row" id="homeTrending">
+    <!-- filled by JS -->
+  </div>
+
+</div><!-- end page-body -->
+
+<!-- ─── MINI PLAYER ─── -->
+<div class="mini-player hidden" id="miniPlayer" onclick="window.location.href='player.html'">
+  <div class="mp-art" id="mpArt">🎵</div>
+  <div class="mp-info">
+    <div class="mp-title"  id="mpTitle">—</div>
+    <div class="mp-artist" id="mpArtist">—</div>
+  </div>
+  <div class="mp-progress">
+    <div class="mp-progress-fill" id="mpFill"></div>
+  </div>
+  <div class="mp-controls" onclick="event.stopPropagation()">
+    <button class="mp-btn" onclick="prevTrack()">⏮</button>
+    <button class="mp-play" id="mpPlay" onclick="togglePlay()">▶</button>
+    <button class="mp-btn" onclick="nextTrack()">⏭</button>
+  </div>
+</div>
+
+<!-- ─── SCRIPTS ─── -->
+<script src="data.js"></script>
+<script>
+// ─── BUILD CATEGORY CARDS ─────────────────────────────
+(function renderCatCards() {
+  const grid = document.getElementById('catGrid');
+  DATA.categories.forEach(c => {
+    const card       = document.createElement('a');
+    card.href        = c.id + '.html';
+    card.className   = 'cat-card';
+    card.style.background = `linear-gradient(145deg, ${c.color}22 0%, var(--bg2) 100%)`;
+    
+    // ✨ FIXED: Calculate count based on category type
+    let count = 0;
+    let label = 'songs';
+    
+    if (c.id === 'trending') {
+      // Count songs with 'trending' category
+      count = DATA.songs.filter(s => s.cat.includes('trending')).length;
+      label = 'songs';
+    } 
+    else if (c.id === 'playlists') {
+      // Count playlists (albums)
+      count = DATA.playlists ? DATA.playlists.length : 0;
+      label = 'playlists';
+    } 
+    else if (c.id === 'artists') {
+      // Count artists
+      count = DATA.artists ? DATA.artists.length : 0;
+      label = 'artists';
+    } 
+    else if (c.id === 'favorites') {
+      // Count favorites from localStorage
+      count = favorites ? favorites.length : 0;
+      label = 'songs';
+    }
+    
+    card.innerHTML   = `
+      <span class="cat-emoji">${c.emoji}</span>
+      <div class="cat-name">${c.name}</div>
+      <div class="cat-count">${count} ${label}</div>
+    `;
+    grid.appendChild(card);
+  });
+})();
+
+// ─── BUILD TRENDING PREVIEW (top 5) ───────────────────
+(function renderTrending() {
+  const row = document.getElementById('homeTrending');
+  const trending = DATA.songs.filter(s => s.cat.includes('trending')).slice(0, 5);
+  trending.forEach((song, i) => {
+    row.appendChild(buildSongItem(song, i + 1));
+  });
+  highlightActiveSong();
+})();
+
+// ─── SHARED SONG-ITEM BUILDER ─────────────────────────
+function buildSongItem(song, rank) {
+  const div          = document.createElement('div');
+  div.className      = 'song-item';
+  div.dataset.songId = song.id;
+  div.onclick        = () => playSong(song.id, true);   // true = go to player
+  let artHTML;
+  if (song.cover) {
+    artHTML = `<img src="${song.cover}" alt="${song.title}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+  } else {
+    artHTML = song.emoji;
+  }
+  div.innerHTML      = `
+    <span class="song-rank">${rank}</span>
+    <div class="song-art">${artHTML}</div>
+    <div class="song-details">
+      <div class="song-title">${song.title}</div>
+      <div class="song-artist">${song.artist}</div>
+    </div>
+    <span class="song-dur">${fmtTime(song.dur)}</span>
+    <div class="song-eq"><span></span><span></span><span></span></div>
+  `;
+  return div;
+}
+
+// ─── INIT mini player state on page load ──────────────
+syncMiniPlayer();
+highlightActiveSong();
+</script>
+</body>
+</html>
