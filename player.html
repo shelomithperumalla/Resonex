@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VIBE — Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* Favorite Button Styles */
+.player-favorite {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.player-favorite:hover {
+  background: rgba(255,255,255,0.15);
+  transform: scale(1.1);
+}
+
+.player-favorite.active {
+  background: rgba(245, 66, 93, 0.2);
+  animation: heartbeat 0.3s ease;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.player-page {
+  position: relative;
+}
+</style>
+</head>
+<body>
+
+<!-- ─── TOP NAV ─── -->
+<nav class="topnav">
+  <a href="index.html" class="logo">RESONEX<span></span></a>
+  <div class="nav-pills">
+    <a href="index.html"     class="nav-pill">Home</a>
+    <a href="trending.html"  class="nav-pill">Trending</a>
+    <a href="playlists.html" class="nav-pill">Playlists</a>
+    <a href="artists.html"   class="nav-pill">Artists</a>
+    <a href="favorites.html" class="nav-pill">Favorites</a>
+  </div>
+</nav>
+
+<!-- ─── PAGE CONTENT ─── -->
+<div class="page-body">
+
+  <a href="index.html" class="back-btn">← Back</a>
+
+  <div class="player-page">
+
+    <!-- Favorite Button -->
+    <button class="player-favorite" id="favBtn" onclick="handleFavoriteClick()" title="Add to Favorites">
+      🤍
+    </button>
+
+    <!-- Vinyl Art -->
+    <div class="player-art-wrap" id="playerArtWrap">
+      <div class="player-art-glow"></div>
+      <div class="player-art-ring"></div>
+      <div class="player-art-disc" id="playerDisc">🎵</div>
+      
+    </div>
+
+    <!-- Song Info -->
+    <div class="player-info">
+      <div class="player-title"  id="playerTitle">Nothing Playing</div>
+      <div class="player-artist" id="playerArtist">Select a song to begin</div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="player-prog-row">
+      <span class="player-time" id="pTimeCur">0:00</span>
+      <div class="player-track" id="playerProg">
+        <div class="player-fill" id="playerFill"></div>
+      </div>
+      <span class="player-time" id="pTimeDur">0:00</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="player-controls">
+      <button class="p-btn" id="pShuffle" onclick="toggleShuffle()" title="Shuffle">⇄</button>
+      <button class="p-btn" onclick="prevTrack()" title="Previous">⏮</button>
+      <button class="p-play" id="pPlay" onclick="togglePlay()">▶</button>
+      <button class="p-btn" onclick="nextTrack()" title="Next">⏭</button>
+      <button class="p-btn" id="pRepeat" onclick="toggleRepeat()" title="Repeat">⟳</button>
+    </div>
+
+    <!-- Volume -->
+    <div class="player-vol">
+      <span class="vol-ico" id="pVolIco">🔊</span>
+      <div class="vol-track" id="pVolTrack">
+        <div class="vol-fill" id="pVolFill"></div>
+      </div>
+    </div>
+
+  </div><!-- end player-page -->
+</div><!-- end page-body -->
+
+<!-- ─── SCRIPTS ─── -->
+<script src="data.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//  PLAYER PAGE - SPECIFIC FUNCTIONALITY
+//  Note: Audio initialization is handled by data.js
+// ═══════════════════════════════════════════════════════
+
+// ─── FAVORITE BUTTON HANDLER ──────────────────────────
+function handleFavoriteClick() {
+  if (state.currentIdx < 0) return;
+  
+  const isFav = toggleFavorite(state.currentIdx);
+  
+  // Trigger heartbeat animation when favoriting
+  const btn = document.getElementById('favBtn');
+  if (isFav) {
+    btn.style.animation = 'none';
+    setTimeout(() => btn.style.animation = '', 10);
+  }
+}
+
+// ─── SEEK BAR (CLICK TO JUMP) ─────────────────────────
+document.getElementById('playerProg').addEventListener('click', function(e) {
+  if (!audio.duration) return;
+  
+  const rect = e.currentTarget.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const width = rect.width;
+  const percentage = clickX / width;
+  
+  audio.currentTime = percentage * audio.duration;
+});
+
+// ─── VOLUME CONTROL (CLICK TO SET) ────────────────────
+document.getElementById('pVolTrack').addEventListener('click', function(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const width = rect.width;
+  
+  state.volume = Math.max(0, Math.min(1, clickX / width));
+  audio.volume = state.volume;
+  saveState();
+  
+  // Update volume UI
+  document.getElementById('pVolFill').style.width = (state.volume * 100) + '%';
+  
+  // Update volume icon
+  const volIco = document.getElementById('pVolIco');
+  if (state.volume > 0.5) {
+    volIco.textContent = '🔊';
+  } else if (state.volume > 0) {
+    volIco.textContent = '🔉';
+  } else {
+    volIco.textContent = '🔇';
+  }
+});
+
+// ─── UPDATE VOLUME ICON ON LOAD ───────────────────────
+function updateVolumeIcon() {
+  const volIco = document.getElementById('pVolIco');
+  if (!volIco) return;
+  
+  if (state.volume > 0.5) {
+    volIco.textContent = '🔊';
+  } else if (state.volume > 0) {
+    volIco.textContent = '🔉';
+  } else {
+    volIco.textContent = '🔇';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ENHANCED SYNC FOR PLAYER PAGE
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Override syncPlayerPage to add player-specific updates
+ * This ensures the player page stays in perfect sync with audio state
+ */
+const originalSyncPlayerPage = syncPlayerPage;
+syncPlayerPage = function() {
+  // Call the original sync function from data.js
+  originalSyncPlayerPage();
+  
+  // Additional player-page-specific updates
+  updateVolumeIcon();
+  
+  // Update play/pause button
+  const playBtn = document.getElementById('pPlay');
+  if (playBtn) {
+    playBtn.textContent = state.isPlaying ? '⏸' : '▶';
+  }
+  
+  // Update vinyl animation
+  const wrap = document.getElementById('playerArtWrap');
+  if (wrap) {
+    wrap.classList.toggle('playing', state.isPlaying);
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+//  PAGE INITIALIZATION
+// ═══════════════════════════════════════════════════════
+
+/**
+ * When the player page loads, we need to:
+ * 1. Let data.js initialize the audio (via initAudio())
+ * 2. Update the player-specific UI elements
+ * 3. Set up event listeners
+ */
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('Player page loaded');
+  
+  // Sync the player UI (this will be called after audio is initialized)
+  setTimeout(() => {
+    syncPlayerPage();
+    updateVolumeIcon();
+    updateFavoriteButton();
+  }, 100);
+});
+
+/**
+ * IMPORTANT: We do NOT create a new audio element here!
+ * The audio element is managed by data.js and shared across all pages.
+ * This ensures continuous playback when navigating between pages.
+ */
+
+console.log('Player page scripts loaded');
+</script>
+</body>
+</html>
